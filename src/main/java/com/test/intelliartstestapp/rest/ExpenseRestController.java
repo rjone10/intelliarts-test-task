@@ -1,6 +1,8 @@
 package com.test.intelliartstestapp.rest;
 
+import com.test.intelliartstestapp.model.Currency;
 import com.test.intelliartstestapp.model.Expense;
+import com.test.intelliartstestapp.model.TotalAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -23,10 +25,13 @@ public class ExpenseRestController {
         this.expenseService = expenseService;
     }
 
-    @RequestMapping(value = "/total", method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Expense> addExpense(@RequestParam("date") String localDate) {
+    @RequestMapping(value = "/total", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<TotalAndCurrency> getTotal(@RequestParam("base") String base) {
+        Currency currency = Currency.valueOf(base);
 
-        return new ResponseEntity<>(HttpStatus.OK);
+        TotalAndCurrency totalAndCurrency = expenseService.getTotal(currency);
+
+        return new ResponseEntity<>(totalAndCurrency, HttpStatus.OK);
     }
 
     @RequestMapping(value = "/expenses", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
