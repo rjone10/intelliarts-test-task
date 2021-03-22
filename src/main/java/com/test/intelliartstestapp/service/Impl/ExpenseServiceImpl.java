@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -25,13 +25,14 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     public BigDecimal getTotal(Currency currency) {
-        return null;
+        return totalInUAH;
     }
 
     @Override
     public void save(Expense expense) {
         log.info("IN ExpenseServiceImpl save {}", expense);
         expenseRepository.save(expense);
+        totalInUAH = totalInUAH.add(expense.getAmount());
     }
 
     @Override
@@ -40,12 +41,29 @@ public class ExpenseServiceImpl implements ExpenseService {
         List<Expense> expenses = expenseRepository.findAll();
         expenses.stream()
                 .filter(expense -> expense.getDate().equals(localDate))
-                .forEach(expense -> expenseRepository.delete(expense));
+                .forEach(expense -> {
+                    totalInUAH = totalInUAH.subtract(expense.getAmount());
+                    expenseRepository.delete(expense);
+                });
     }
 
     @Override
-    public List<Expense> getAllExpenses() {
+    public Map<LocalDate, List<Expense>> getAll() {
         log.info("IN ExpenseServiceImpl getAllExpenses {}");
-        return expenseRepository.findAll();
+        List<Expense> list = new ArrayList<>(expenseRepository.findAll());
+
+        Map<LocalDate, List<Expense>> map = new TreeMap<>();
+        for (Expense expense : list) {
+            LocalDate localDate = expense.getDate();
+            if (!map.containsKey(localDate)) {
+                map.put(localDate, List.of(expense));
+            } else {
+                List<Expense> expenseList = new ArrayList<>(map.get(localDate));
+                expenseList.add(expense);
+                map.put(localDate, expenseList);
+            }
+        }
+        return map;
     }
+
 }
