@@ -11,7 +11,7 @@ import java.math.BigDecimal;
 @Data
 @Entity
 @Table(name = "total")
-public class TotalAmountEntity {
+public class TotalAmount {
 
     @Id
     @Column

@@ -2,7 +2,7 @@ package com.test.intelliartstestapp.service.impl;
 
 import com.test.intelliartstestapp.model.*;
 import com.test.intelliartstestapp.repository.ExpenseRepository;
-import com.test.intelliartstestapp.repository.TotalAmountEntityRepository;
+import com.test.intelliartstestapp.repository.TotalAmountRepository;
 import com.test.intelliartstestapp.rest.dto.LatestCurrencyRateDto;
 import com.test.intelliartstestapp.rest.dto.TotalAmountAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
@@ -26,20 +26,20 @@ import java.util.function.BiFunction;
 @Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
     private ExpenseRepository expenseRepository;
-    private TotalAmountEntityRepository totalAmountEntityRepository;
+    private TotalAmountRepository totalAmountRepository;
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ExpenseServiceImpl(ExpenseRepository expenseRepository, TotalAmountEntityRepository totalAmountEntityRepository, RestTemplateBuilder restTemplateBuilder) {
+    public ExpenseServiceImpl(ExpenseRepository expenseRepository, TotalAmountRepository totalAmountRepository, RestTemplateBuilder restTemplateBuilder) {
         this.expenseRepository = expenseRepository;
-        this.totalAmountEntityRepository = totalAmountEntityRepository;
+        this.totalAmountRepository = totalAmountRepository;
         this.restTemplate = restTemplateBuilder.build();
     }
 
     @Override
     public TotalAmountAndCurrency getTotalAmount(Currency currency) {
         log.info("IN ExpenseServiceImpl getTotal {}", currency);
-        BigDecimal totalAmount = totalAmountEntityRepository.getOne(1L).getTotalAmount();
+        BigDecimal totalAmount = totalAmountRepository.getOne(1L).getTotalAmount();
 
         LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(currency);
         Map<String, String> rates = latestCurrencyRateDto.getRates();
@@ -56,8 +56,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         return responseEntity.getBody();
     }
 
-    //save or delete operations
-    private void setAmountInEUR(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
+    private void saveOrDeleteAmount(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
         LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(expense.getCurrency());
         Map<String, String> rates = latestCurrencyRateDto.getRates();
         BigDecimal currentRate = new BigDecimal(rates.get(expense.getCurrency().toString()));
@@ -65,19 +64,19 @@ public class ExpenseServiceImpl implements ExpenseService {
         BigDecimal expenseAmount = expense.getAmount();
         BigDecimal expenseAmountInEUR = expenseAmount.divide(currentRate, 2, RoundingMode.CEILING);
 
-        TotalAmountEntity totalAmountEntity = totalAmountEntityRepository.getOne(1L);
+        TotalAmount totalAmountEntity = totalAmountRepository.getOne(1L);
         BigDecimal totalAmount = totalAmountEntity.getTotalAmount();
 
         BigDecimal resultAmount = operation.apply(totalAmount, expenseAmountInEUR);
 
         totalAmountEntity.setTotalAmount(resultAmount);
-        totalAmountEntityRepository.save(totalAmountEntity);
+        totalAmountRepository.save(totalAmountEntity);
     }
 
     @Override
     public void save(Expense expense) {
         log.info("IN ExpenseServiceImpl save {}", expense);
-        setAmountInEUR(expense, BigDecimal::add);
+        saveOrDeleteAmount(expense, BigDecimal::add);
         expenseRepository.save(expense);
     }
 
@@ -88,7 +87,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         expenses.stream()
                 .filter(expense -> expense.getDate().equals(localDate))
                 .forEach(expense -> {
-                    setAmountInEUR(expense, BigDecimal::subtract);
+                    saveOrDeleteAmount(expense, BigDecimal::subtract);
                     expenseRepository.delete(expense);
                 });
     }
