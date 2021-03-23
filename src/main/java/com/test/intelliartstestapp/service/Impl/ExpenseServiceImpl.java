@@ -41,6 +41,7 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     public TotalAndCurrency getTotal(Currency currency) {
+        log.info("IN ExpenseServiceImpl getTotal {}", currency);
         if (totalInEUR.equals(new BigDecimal("0.00"))) {
             return new TotalAndCurrency(totalInEUR, currency);
         }
@@ -61,9 +62,7 @@ public class ExpenseServiceImpl implements ExpenseService {
     //get string from json url
     private String getStringFromJson(Currency currency) {
         String url = (String.format(
-                "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=" +
-                        "%s" +
-                        "&format=1", currency.toString()));
+                "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=%s", currency.toString()));
         ResponseEntity<String> responseEntity = this.restTemplate.getForEntity(url, String.class, 1);
         return responseEntity.getBody();
     }
