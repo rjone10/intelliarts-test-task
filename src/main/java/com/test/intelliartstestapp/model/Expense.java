@@ -1,5 +1,6 @@
 package com.test.intelliartstestapp.model;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import javax.persistence.*;
@@ -7,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Data
+@AllArgsConstructor
 @Entity
 @Table(name = "expenses")
 public class Expense {

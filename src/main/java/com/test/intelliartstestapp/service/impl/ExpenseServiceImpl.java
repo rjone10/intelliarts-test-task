@@ -74,30 +74,39 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
-    public void save(Expense expense) {
+    public boolean save(Expense expense) throws IllegalArgumentException {
         log.info("IN ExpenseServiceImpl save {}", expense);
         saveOrDeleteAmount(expense, BigDecimal::add);
         expenseRepository.save(expense);
+        return true;
     }
 
     @Override
-    public void delete(LocalDate localDate) {
+    public boolean delete(LocalDate localDate) throws IllegalArgumentException {
         log.info("IN ExpenseServiceImpl delete {}", localDate);
         List<Expense> expenses = expenseRepository.findAll();
+        if (expenses.isEmpty()) {
+            return false;
+        }
         expenses.stream()
                 .filter(expense -> expense.getDate().equals(localDate))
                 .forEach(expense -> {
                     saveOrDeleteAmount(expense, BigDecimal::subtract);
                     expenseRepository.delete(expense);
                 });
+        return true;
     }
 
     @Override
     public Map<LocalDate, List<Expense>> getAll() {
         log.info("IN ExpenseServiceImpl getAllExpenses {}");
-        List<Expense> list = new ArrayList<>(expenseRepository.findAll());
-
         Map<LocalDate, List<Expense>> map = new TreeMap<>();
+
+        List<Expense> list = new ArrayList<>(expenseRepository.findAll());
+        if (list.isEmpty()) {
+            return map;
+        }
+
         for (Expense expense : list) {
             LocalDate localDate = expense.getDate();
             if (!map.containsKey(localDate)) {

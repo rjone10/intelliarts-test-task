@@ -11,9 +11,9 @@ import java.util.Map;
 public interface ExpenseService {
     TotalAmountAndCurrency getTotalAmount(Currency currency);
 
-    void save(Expense expense);
+    boolean save(Expense expense);
 
-    void delete(LocalDate localDate);
+    boolean delete(LocalDate localDate);
 
     Map<LocalDate, List<Expense>> getAll();
 }
