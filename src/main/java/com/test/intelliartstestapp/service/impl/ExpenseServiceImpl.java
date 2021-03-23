@@ -1,21 +1,18 @@
-package com.test.intelliartstestapp.service.Impl;
+package com.test.intelliartstestapp.service.impl;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.test.intelliartstestapp.model.*;
 import com.test.intelliartstestapp.repository.ExpenseRepository;
 import com.test.intelliartstestapp.repository.TotalAmountEntityRepository;
+import com.test.intelliartstestapp.rest.dto.LatestCurrencyRateDto;
+import com.test.intelliartstestapp.rest.dto.TotalAmountAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
@@ -42,28 +39,27 @@ public class ExpenseServiceImpl implements ExpenseService {
     @Override
     public TotalAmountAndCurrency getTotalAmount(Currency currency) {
         log.info("IN ExpenseServiceImpl getTotal {}", currency);
-
         BigDecimal totalAmount = totalAmountEntityRepository.getOne(1L).getTotalAmount();
 
-        LatestCurrencyRate latestCurrencyRate = getLatestCurrencyRate(currency);
-        Map<String, String> rates = latestCurrencyRate.getRates();
+        LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(currency);
+        Map<String, String> rates = latestCurrencyRateDto.getRates();
         BigDecimal currentRate = new BigDecimal(rates.get(currency.toString()));
 
         return new TotalAmountAndCurrency(totalAmount.multiply(currentRate).setScale(2, RoundingMode.CEILING), currency);
     }
 
 
-    private LatestCurrencyRate getLatestCurrencyRate(Currency currency) {
+    private LatestCurrencyRateDto getLatestCurrencyRate(Currency currency) {
         String url = (String.format(
                 "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=%s", currency.toString()));
-        ResponseEntity<LatestCurrencyRate> responseEntity = this.restTemplate.getForEntity(url, LatestCurrencyRate.class, 1);
+        ResponseEntity<LatestCurrencyRateDto> responseEntity = this.restTemplate.getForEntity(url, LatestCurrencyRateDto.class, 1);
         return responseEntity.getBody();
     }
 
     //save or delete operations
     private void setAmountInEUR(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
-        LatestCurrencyRate latestCurrencyRate = getLatestCurrencyRate(expense.getCurrency());
-        Map<String, String> rates = latestCurrencyRate.getRates();
+        LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(expense.getCurrency());
+        Map<String, String> rates = latestCurrencyRateDto.getRates();
         BigDecimal currentRate = new BigDecimal(rates.get(expense.getCurrency().toString()));
 
         BigDecimal expenseAmount = expense.getAmount();

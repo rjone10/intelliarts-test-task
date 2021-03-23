@@ -1,4 +1,4 @@
-package com.test.intelliartstestapp.model;
+package com.test.intelliartstestapp.rest.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,7 +7,7 @@ import java.util.Map;
 
 @Data
 @AllArgsConstructor
-public class LatestCurrencyRate {
+public class LatestCurrencyRateDto {
     private boolean success;
     private float timestamp;
     private String base;

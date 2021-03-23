@@ -1,8 +1,8 @@
-package com.test.intelliartstestapp.rest;
+package com.test.intelliartstestapp.rest.controller;
 
 import com.test.intelliartstestapp.model.Currency;
 import com.test.intelliartstestapp.model.Expense;
-import com.test.intelliartstestapp.model.TotalAmountAndCurrency;
+import com.test.intelliartstestapp.rest.dto.TotalAmountAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

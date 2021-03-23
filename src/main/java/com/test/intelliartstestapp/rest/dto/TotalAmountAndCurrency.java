@@ -1,5 +1,6 @@
-package com.test.intelliartstestapp.model;
+package com.test.intelliartstestapp.rest.dto;
 
+import com.test.intelliartstestapp.model.Currency;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
