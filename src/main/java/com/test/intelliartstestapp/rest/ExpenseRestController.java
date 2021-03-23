@@ -2,7 +2,7 @@ package com.test.intelliartstestapp.rest;
 
 import com.test.intelliartstestapp.model.Currency;
 import com.test.intelliartstestapp.model.Expense;
-import com.test.intelliartstestapp.model.TotalAndCurrency;
+import com.test.intelliartstestapp.model.TotalAmountAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,12 +26,12 @@ public class ExpenseRestController {
     }
 
     @RequestMapping(value = "/total", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<TotalAndCurrency> getTotal(@RequestParam("base") String base) {
+    public ResponseEntity<TotalAmountAndCurrency> getTotal(@RequestParam("base") String base) {
         Currency currency = Currency.valueOf(base);
 
-        TotalAndCurrency totalAndCurrency = expenseService.getTotal(currency);
+        TotalAmountAndCurrency totalAmountAndCurrency = expenseService.getTotalAmount(currency);
 
-        return new ResponseEntity<>(totalAndCurrency, HttpStatus.OK);
+        return new ResponseEntity<>(totalAmountAndCurrency, HttpStatus.OK);
     }
 
     @RequestMapping(value = "/expenses", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)

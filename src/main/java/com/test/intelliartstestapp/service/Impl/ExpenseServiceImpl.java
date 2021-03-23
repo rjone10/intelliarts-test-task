@@ -2,10 +2,9 @@ package com.test.intelliartstestapp.service.Impl;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.test.intelliartstestapp.model.Currency;
-import com.test.intelliartstestapp.model.Expense;
-import com.test.intelliartstestapp.model.TotalAndCurrency;
+import com.test.intelliartstestapp.model.*;
 import com.test.intelliartstestapp.repository.ExpenseRepository;
+import com.test.intelliartstestapp.repository.TotalAmountEntityRepository;
 import com.test.intelliartstestapp.service.ExpenseService;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONException;
@@ -30,68 +29,60 @@ import java.util.function.BiFunction;
 @Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
     private ExpenseRepository expenseRepository;
-    private BigDecimal totalInEUR = new BigDecimal("0.00");
+    private TotalAmountEntityRepository totalAmountEntityRepository;
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ExpenseServiceImpl(ExpenseRepository expenseRepository, RestTemplateBuilder restTemplateBuilder) {
+    public ExpenseServiceImpl(ExpenseRepository expenseRepository, TotalAmountEntityRepository totalAmountEntityRepository, RestTemplateBuilder restTemplateBuilder) {
         this.expenseRepository = expenseRepository;
+        this.totalAmountEntityRepository = totalAmountEntityRepository;
         this.restTemplate = restTemplateBuilder.build();
     }
 
     @Override
-    public TotalAndCurrency getTotal(Currency currency) {
+    public TotalAmountAndCurrency getTotalAmount(Currency currency) {
         log.info("IN ExpenseServiceImpl getTotal {}", currency);
-        if (totalInEUR.equals(new BigDecimal("0.00"))) {
-            return new TotalAndCurrency(totalInEUR, currency);
-        }
-        log.info("IN ExpenseServiceImpl getTotal {}", currency);
-        String json = getStringFromJson(currency);
 
-        try {
-            JSONObject jsonObject = new JSONObject(json);
-            Map<String, Object> result = new ObjectMapper().readValue(String.valueOf(jsonObject.get("rates")), new TypeReference<>(){});
-            BigDecimal currencyInEUR = new BigDecimal(result.get(currency.toString()).toString());
+        BigDecimal totalAmount = totalAmountEntityRepository.getOne(1L).getTotalAmount();
 
-            return new TotalAndCurrency(totalInEUR.multiply(currencyInEUR).setScale(2, RoundingMode.CEILING), currency);
-        } catch (JSONException | IOException e) {
-            return null;
-        }
+        LatestCurrencyRate latestCurrencyRate = getLatestCurrencyRate(currency);
+        Map<String, String> rates = latestCurrencyRate.getRates();
+        BigDecimal currentRate = new BigDecimal(rates.get(currency.toString()));
+
+        return new TotalAmountAndCurrency(totalAmount.multiply(currentRate).setScale(2, RoundingMode.CEILING), currency);
     }
 
-    //get string from json url
-    private String getStringFromJson(Currency currency) {
+
+    private LatestCurrencyRate getLatestCurrencyRate(Currency currency) {
         String url = (String.format(
                 "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=%s", currency.toString()));
-        ResponseEntity<String> responseEntity = this.restTemplate.getForEntity(url, String.class, 1);
+        ResponseEntity<LatestCurrencyRate> responseEntity = this.restTemplate.getForEntity(url, LatestCurrencyRate.class, 1);
         return responseEntity.getBody();
     }
 
-    //save of delete operations
-    private BigDecimal setAmountInEUR(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
-        String currency = expense.getCurrency().toString();
+    //save or delete operations
+    private void setAmountInEUR(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
+        LatestCurrencyRate latestCurrencyRate = getLatestCurrencyRate(expense.getCurrency());
+        Map<String, String> rates = latestCurrencyRate.getRates();
+        BigDecimal currentRate = new BigDecimal(rates.get(expense.getCurrency().toString()));
 
-        String json = getStringFromJson(expense.getCurrency());
+        BigDecimal expenseAmount = expense.getAmount();
+        BigDecimal expenseAmountInEUR = expenseAmount.divide(currentRate, 2, RoundingMode.CEILING);
 
-        try {
-            JSONObject jsonObject = new JSONObject(json);
-            Map<String, Object> result = new ObjectMapper().readValue(String.valueOf(jsonObject.get("rates")), new TypeReference<>(){});
-            BigDecimal expenseAmount = expense.getAmount();
-            BigDecimal currencyInEUR = new BigDecimal(result.get(currency).toString());
+        TotalAmountEntity totalAmountEntity = totalAmountEntityRepository.getOne(1L);
+        BigDecimal totalAmount = totalAmountEntity.getTotalAmount();
 
-            BigDecimal expenseInEur = expenseAmount.divide(currencyInEUR, 2, RoundingMode.CEILING);
-            totalInEUR = operation.apply(totalInEUR, expenseInEur);
-        } catch (JSONException | IOException e) {
-            return null;
-        }
-        return totalInEUR;
+        BigDecimal resultAmount = operation.apply(totalAmount, expenseAmountInEUR);
+
+        totalAmountEntity.setTotalAmount(resultAmount);
+        totalAmountEntityRepository.save(totalAmountEntity);
     }
 
     @Override
     public void save(Expense expense) {
         log.info("IN ExpenseServiceImpl save {}", expense);
+        setAmountInEUR(expense, BigDecimal::add);
         expenseRepository.save(expense);
-        totalInEUR = setAmountInEUR(expense, BigDecimal::add);
     }
 
     @Override
@@ -101,7 +92,7 @@ public class ExpenseServiceImpl implements ExpenseService {
         expenses.stream()
                 .filter(expense -> expense.getDate().equals(localDate))
                 .forEach(expense -> {
-                    totalInEUR = setAmountInEUR(expense, BigDecimal::subtract);
+                    setAmountInEUR(expense, BigDecimal::subtract);
                     expenseRepository.delete(expense);
                 });
     }
