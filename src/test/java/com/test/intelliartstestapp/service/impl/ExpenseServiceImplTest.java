@@ -30,8 +30,8 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 class ExpenseServiceImplTest {
-    private ExpenseService expenseService;
-    private ExpenseRepository expenseRepository;
+    private final ExpenseService expenseService;
+    private final ExpenseRepository expenseRepository;
 
     @Autowired
     public ExpenseServiceImplTest(ExpenseService expenseService, ExpenseRepository expenseRepository) {
@@ -42,22 +42,21 @@ class ExpenseServiceImplTest {
     @MockBean
     private RestTemplate restTemplate;
 
-    private Expense expense1 = new Expense(1L, LocalDate.parse("2021-04-25"), new BigDecimal("2.85"), Currency.USD, "Yogurt");
-    private Expense expense2 = new Expense(2L, LocalDate.parse("2021-04-22"), new BigDecimal("12"), Currency.USD, "Salmon");
-    private Expense expense3 = new Expense(3L, LocalDate.parse("2021-04-25"), new BigDecimal("3"), Currency.USD, "French fries");
+    private Expense expense1;
+    private Expense expense2;
+    private Expense expense3;
 
     @BeforeEach
     void addExpenses() {
-        expenseService.save(expense1);
-        expenseService.save(expense2);
-        expenseService.save(expense3);
+        expense1 = expenseService.save(new Expense(1L, LocalDate.parse("2021-04-25"), new BigDecimal("2.85"), Currency.USD, "Yogurt"));
+        expense2 = expenseService.save(new Expense(2L, LocalDate.parse("2021-04-22"), new BigDecimal("12.00"), Currency.USD, "Salmon"));
+        expense3 = expenseService.save(new Expense(3L, LocalDate.parse("2021-04-25"), new BigDecimal("3.00"), Currency.USD, "French fries"));
     }
 
     @AfterEach
     void deleteExpenses() {
         expenseService.delete(expense1.getDate());
         expenseService.delete(expense2.getDate());
-        expenseService.delete(expense3.getDate());
     }
 
     @Test
@@ -69,11 +68,10 @@ class ExpenseServiceImplTest {
         rates.put("UAH", "32.95");
         LatestCurrencyRateDto latestCurrencyRateDto = new LatestCurrencyRateDto(false, 0.00f, null, null, rates);
 
-        when(restTemplate.getForEntity(
-                anyString(), any(), eq(1)))
+        when(restTemplate.getForEntity(anyString(), any(), eq(1)))
                 .thenReturn(ResponseEntity.of(Optional.of(latestCurrencyRateDto)));
 
-        TotalAmountAndCurrency expected = new TotalAmountAndCurrency(new BigDecimal("498.27"), Currency.UAH);
+        TotalAmountAndCurrency expected = new TotalAmountAndCurrency(new BigDecimal("497.89"), Currency.UAH);
         assertEquals(expected, expenseService.getTotalAmount(Currency.UAH));
     }
 
@@ -88,7 +86,7 @@ class ExpenseServiceImplTest {
     @Test
     @Transactional
     void testDelete() {
-        assertEquals(expense1, expenseRepository.findById(expense1.getId()).get());
+        assertEquals(expense2, expenseRepository.findById(expense2.getId()).get());
 
         expenseService.delete(LocalDate.parse("2021-04-25"));
 

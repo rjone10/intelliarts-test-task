@@ -21,7 +21,7 @@ import java.util.*;
 @Service
 @Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
-    private ExpenseRepository expenseRepository;
+    private final ExpenseRepository expenseRepository;
     private final RestTemplate restTemplate;
 
     @Autowired
@@ -40,12 +40,12 @@ public class ExpenseServiceImpl implements ExpenseService {
         BigDecimal result = allExpenses.stream()
                 .flatMap(Collection::stream)
                 .map(expense -> expense.getAmount()
-                        .divide(new BigDecimal(rates.get(expense.getCurrency().toString())), 2, RoundingMode.CEILING))
+                        .divide(new BigDecimal(rates.get(expense.getCurrency().toString())), 2, RoundingMode.HALF_EVEN))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal currentRate = new BigDecimal(rates.get(currency.toString()));
 
-        return new TotalAmountAndCurrency(result.multiply(currentRate).setScale(2, RoundingMode.CEILING), currency);
+        return new TotalAmountAndCurrency(result.multiply(currentRate).setScale(2, RoundingMode.HALF_EVEN), currency);
     }
 
 
@@ -56,9 +56,9 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
-    public void save(Expense expense) throws IllegalArgumentException {
+    public Expense save(Expense expense) throws IllegalArgumentException {
         log.info("IN ExpenseServiceImpl save {}", expense);
-        expenseRepository.save(expense);
+        return expenseRepository.save(expense);
     }
 
     @Override

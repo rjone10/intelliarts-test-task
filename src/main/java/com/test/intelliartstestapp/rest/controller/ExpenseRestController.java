@@ -18,7 +18,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/")
 public class ExpenseRestController {
-    private ExpenseService expenseService;
+    private final ExpenseService expenseService;
 
     @Autowired
     public ExpenseRestController(ExpenseService expenseService) {
