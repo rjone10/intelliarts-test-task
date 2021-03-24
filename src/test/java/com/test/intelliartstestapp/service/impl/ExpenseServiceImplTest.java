@@ -78,15 +78,15 @@ class ExpenseServiceImplTest {
     @Test
     @Transactional
     void testSave() {
-        assertEquals(expense1, expenseRepository.findById(expense1.getId()).get());
-        assertEquals(expense2, expenseRepository.findById(expense2.getId()).get());
-        assertEquals(expense3, expenseRepository.findById(expense3.getId()).get());
+        assertEquals(expense1, expenseRepository.findById(expense1.getId()).orElseThrow());
+        assertEquals(expense2, expenseRepository.findById(expense2.getId()).orElseThrow());
+        assertEquals(expense3, expenseRepository.findById(expense3.getId()).orElseThrow());
     }
 
     @Test
     @Transactional
     void testDelete() {
-        assertEquals(expense2, expenseRepository.findById(expense2.getId()).get());
+        assertEquals(expense2, expenseRepository.findById(expense2.getId()).orElseThrow());
 
         expenseService.delete(LocalDate.parse("2021-04-25"));
 

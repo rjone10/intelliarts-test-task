@@ -73,7 +73,7 @@ public class ExpenseServiceImpl implements ExpenseService {
 
     @Override
     public Map<LocalDate, List<Expense>> getAll() {
-        log.info("IN ExpenseServiceImpl getAllExpenses {}");
+        log.info("IN ExpenseServiceImpl getAllExpenses");
         Map<LocalDate, List<Expense>> map = new TreeMap<>();
 
         List<Expense> list = new ArrayList<>(expenseRepository.findAll());
