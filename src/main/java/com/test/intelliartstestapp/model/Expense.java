@@ -12,9 +12,8 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "expenses")
 public class Expense {
-
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
     private Long id;
 
