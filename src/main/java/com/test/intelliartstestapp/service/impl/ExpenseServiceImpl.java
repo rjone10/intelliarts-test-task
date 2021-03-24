@@ -1,8 +1,8 @@
 package com.test.intelliartstestapp.service.impl;
 
-import com.test.intelliartstestapp.model.*;
+import com.test.intelliartstestapp.model.Currency;
+import com.test.intelliartstestapp.model.Expense;
 import com.test.intelliartstestapp.repository.ExpenseRepository;
-import com.test.intelliartstestapp.repository.TotalAmountRepository;
 import com.test.intelliartstestapp.rest.dto.LatestCurrencyRateDto;
 import com.test.intelliartstestapp.rest.dto.TotalAmountAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
@@ -16,85 +16,59 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.function.BiFunction;
+import java.util.*;
 
 @Service
 @Slf4j
 public class ExpenseServiceImpl implements ExpenseService {
     private ExpenseRepository expenseRepository;
-    private TotalAmountRepository totalAmountRepository;
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ExpenseServiceImpl(ExpenseRepository expenseRepository, TotalAmountRepository totalAmountRepository, RestTemplateBuilder restTemplateBuilder) {
+    public ExpenseServiceImpl(ExpenseRepository expenseRepository, RestTemplateBuilder restTemplateBuilder) {
         this.expenseRepository = expenseRepository;
-        this.totalAmountRepository = totalAmountRepository;
         this.restTemplate = restTemplateBuilder.build();
     }
 
     @Override
     public TotalAmountAndCurrency getTotalAmount(Currency currency) {
         log.info("IN ExpenseServiceImpl getTotal {}", currency);
-        BigDecimal totalAmount = totalAmountRepository.getOne(1L).getTotalAmount();
-
-        LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(currency);
+        LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate();
         Map<String, String> rates = latestCurrencyRateDto.getRates();
+
+        Collection<List<Expense>> allExpenses = getAll().values();
+        BigDecimal result = allExpenses.stream()
+                .flatMap(Collection::stream)
+                .map(expense -> expense.getAmount()
+                        .divide(new BigDecimal(rates.get(expense.getCurrency().toString())), 2, RoundingMode.CEILING))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         BigDecimal currentRate = new BigDecimal(rates.get(currency.toString()));
 
-        return new TotalAmountAndCurrency(totalAmount.multiply(currentRate).setScale(2, RoundingMode.CEILING), currency);
+        return new TotalAmountAndCurrency(result.multiply(currentRate).setScale(2, RoundingMode.CEILING), currency);
     }
 
 
-    private LatestCurrencyRateDto getLatestCurrencyRate(Currency currency) {
-        String url = (String.format(
-                "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=%s", currency.toString()));
+    private LatestCurrencyRateDto getLatestCurrencyRate() {
+        String url = ("http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=USD,UAH,PLN,EUR");
         ResponseEntity<LatestCurrencyRateDto> responseEntity = this.restTemplate.getForEntity(url, LatestCurrencyRateDto.class, 1);
         return responseEntity.getBody();
     }
 
-    private void saveOrDeleteAmount(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
-        LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(expense.getCurrency());
-        Map<String, String> rates = latestCurrencyRateDto.getRates();
-        BigDecimal currentRate = new BigDecimal(rates.get(expense.getCurrency().toString()));
-
-        BigDecimal expenseAmount = expense.getAmount();
-        BigDecimal expenseAmountInEUR = expenseAmount.divide(currentRate, 2, RoundingMode.CEILING);
-
-        TotalAmount totalAmountEntity = totalAmountRepository.getOne(1L);
-        BigDecimal totalAmount = totalAmountEntity.getTotalAmount();
-
-        BigDecimal resultAmount = operation.apply(totalAmount, expenseAmountInEUR);
-
-        totalAmountEntity.setTotalAmount(resultAmount);
-        totalAmountRepository.save(totalAmountEntity);
-    }
-
     @Override
-    public boolean save(Expense expense) throws IllegalArgumentException {
+    public void save(Expense expense) throws IllegalArgumentException {
         log.info("IN ExpenseServiceImpl save {}", expense);
-        saveOrDeleteAmount(expense, BigDecimal::add);
         expenseRepository.save(expense);
-        return true;
     }
 
     @Override
-    public boolean delete(LocalDate localDate) throws IllegalArgumentException {
+    public void delete(LocalDate localDate) throws IllegalArgumentException {
         log.info("IN ExpenseServiceImpl delete {}", localDate);
         List<Expense> expenses = expenseRepository.findAll();
-        if (expenses.isEmpty()) {
-            return false;
-        }
+
         expenses.stream()
                 .filter(expense -> expense.getDate().equals(localDate))
-                .forEach(expense -> {
-                    saveOrDeleteAmount(expense, BigDecimal::subtract);
-                    expenseRepository.delete(expense);
-                });
-        return true;
+                .forEach(expense -> expenseRepository.delete(expense));
     }
 
     @Override
