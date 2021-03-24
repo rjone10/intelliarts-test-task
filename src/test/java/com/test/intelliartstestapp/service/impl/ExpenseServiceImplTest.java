@@ -20,7 +20,10 @@ import org.springframework.web.client.RestTemplate;
 import javax.transaction.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,12 +49,10 @@ class ExpenseServiceImplTest {
     private Expense expense1 = new Expense(1L, LocalDate.parse("2021-04-25"), new BigDecimal("2.85"), Currency.USD, "Yogurt");
     private Expense expense2 = new Expense(2L, LocalDate.parse("2021-04-22"), new BigDecimal("12"), Currency.USD, "Salmon");
     private Expense expense3 = new Expense(3L, LocalDate.parse("2021-04-25"), new BigDecimal("3"), Currency.USD, "French fries");
-    private Expense expense4 = new Expense(4L, LocalDate.parse("2021-04-27"), new BigDecimal("4.75"), Currency.EUR, "Beer");
-    private Expense expense5 = new Expense(5L, LocalDate.parse("2021-04-27"), new BigDecimal("25.5"), Currency.UAH, "Sweets");
 
     @Test
     @Transactional
-    void getTotalAmount() {
+    void testGetTotalAmount() {
         Map<String, String> rates = new HashMap<>();
         rates.put("USD", "1.18");
         rates.put("PLN", "4.61");
@@ -60,23 +61,22 @@ class ExpenseServiceImplTest {
 
         TotalAmount totalAmount = new TotalAmount(1L, "16.75");
 
-        when(totalAmountRepository.getOne(1L)).thenReturn(totalAmount);
+        when(totalAmountRepository.getOne(anyLong())).thenReturn(totalAmount);
 
         when(restTemplate.getForEntity(
-                "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=UAH"
-                , LatestCurrencyRateDto.class, 1))
+                anyString(), any(), eq(1)))
                 .thenReturn(ResponseEntity.of(Optional.of(latestCurrencyRateDto)));
 
-        TotalAmountAndCurrency expected = new TotalAmountAndCurrency(new BigDecimal("552.32"), Currency.UAH);
+        TotalAmountAndCurrency expected = new TotalAmountAndCurrency(new BigDecimal("552.77"), Currency.UAH);
         assertEquals(expected, expenseService.getTotalAmount(Currency.UAH));
     }
 
     @Test
     @Transactional
-    void save() {
+    void testSave() {
         TotalAmount totalAmount = new TotalAmount(1L, "16.75");
 
-        when(totalAmountRepository.getOne(1L)).thenReturn(totalAmount);
+        when(totalAmountRepository.getOne(anyLong())).thenReturn(totalAmount);
 
         boolean isSaved = expenseService.save(expense3);
 
@@ -86,26 +86,15 @@ class ExpenseServiceImplTest {
 
     @Test
     @Transactional
-    void delete() {
+    void testDelete() {
         TotalAmount totalAmount = new TotalAmount(1L, "16.75");
 
-        when(totalAmountRepository.getOne(1L)).thenReturn(totalAmount);
+        when(totalAmountRepository.getOne(anyLong())).thenReturn(totalAmount);
         when(expenseRepository.findAll()).thenReturn(Arrays.asList(expense1, expense2, expense3));
 
         boolean isDeleted = expenseService.delete(LocalDate.parse("2021-04-25"));
 
         assertTrue(isDeleted);
         verify(expenseRepository, times(2)).delete(any(Expense.class));
-    }
-
-    @Test
-    void getAll() {
-        when(expenseRepository.findAll()).thenReturn(Arrays.asList(expense3, expense4, expense5));
-
-        Map<LocalDate, List<Expense>> expectedMap = new TreeMap<>();
-        expectedMap.put(LocalDate.parse("2021-04-25"), Collections.singletonList(expense3));
-        expectedMap.put(LocalDate.parse("2021-04-27"), Arrays.asList(expense4, expense5));
-
-        assertEquals(expectedMap, expenseService.getAll());
     }
 }

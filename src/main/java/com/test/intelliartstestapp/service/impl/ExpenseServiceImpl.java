@@ -49,14 +49,14 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
 
-    public LatestCurrencyRateDto getLatestCurrencyRate(Currency currency) {
+    private LatestCurrencyRateDto getLatestCurrencyRate(Currency currency) {
         String url = (String.format(
                 "http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=%s", currency.toString()));
         ResponseEntity<LatestCurrencyRateDto> responseEntity = this.restTemplate.getForEntity(url, LatestCurrencyRateDto.class, 1);
         return responseEntity.getBody();
     }
 
-    public void saveOrDeleteAmount(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
+    private void saveOrDeleteAmount(Expense expense, BiFunction<BigDecimal, BigDecimal, BigDecimal> operation) {
         LatestCurrencyRateDto latestCurrencyRateDto = getLatestCurrencyRate(expense.getCurrency());
         Map<String, String> rates = latestCurrencyRateDto.getRates();
         BigDecimal currentRate = new BigDecimal(rates.get(expense.getCurrency().toString()));
