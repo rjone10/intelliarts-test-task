@@ -35,8 +35,8 @@ public class ExpenseRestController {
     }
 
     @RequestMapping(value = "/expenses", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Map<LocalDate, List<Expense>>> getExpenses() {
-        Map<LocalDate, List<Expense>> expenses = expenseService.getAll();
+    public ResponseEntity<Map<String, List<Expense>>> getExpenses() {
+        Map<String, List<Expense>> expenses = expenseService.getAll();
 
         if (expenses.isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);

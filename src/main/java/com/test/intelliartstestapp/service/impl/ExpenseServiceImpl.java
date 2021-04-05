@@ -8,7 +8,6 @@ import com.test.intelliartstestapp.rest.dto.TotalAmountAndCurrency;
 import com.test.intelliartstestapp.service.ExpenseService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -25,9 +24,9 @@ public class ExpenseServiceImpl implements ExpenseService {
     private final RestTemplate restTemplate;
 
     @Autowired
-    public ExpenseServiceImpl(ExpenseRepository expenseRepository, RestTemplateBuilder restTemplateBuilder) {
+    public ExpenseServiceImpl(ExpenseRepository expenseRepository, RestTemplate restTemplate) {
         this.expenseRepository = expenseRepository;
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -48,7 +47,6 @@ public class ExpenseServiceImpl implements ExpenseService {
         return new TotalAmountAndCurrency(result.multiply(currentRate).setScale(2, RoundingMode.HALF_EVEN), currency);
     }
 
-
     private LatestCurrencyRateDto getLatestCurrencyRate() {
         String url = ("http://data.fixer.io/api/latest?access_key=4ae67f6c83d66b76d987de1469e77131&symbols=USD,UAH,PLN,EUR");
         ResponseEntity<LatestCurrencyRateDto> responseEntity = this.restTemplate.getForEntity(url, LatestCurrencyRateDto.class, 1);
@@ -68,13 +66,13 @@ public class ExpenseServiceImpl implements ExpenseService {
 
         expenses.stream()
                 .filter(expense -> expense.getDate().equals(localDate))
-                .forEach(expense -> expenseRepository.delete(expense));
+                .forEach(expenseRepository::delete);
     }
 
     @Override
-    public Map<LocalDate, List<Expense>> getAll() {
+    public Map<String, List<Expense>> getAll() {
         log.info("IN ExpenseServiceImpl getAllExpenses");
-        Map<LocalDate, List<Expense>> map = new TreeMap<>();
+        Map<String, List<Expense>> map = new TreeMap<>();
 
         List<Expense> list = new ArrayList<>(expenseRepository.findAll());
         if (list.isEmpty()) {
@@ -82,13 +80,13 @@ public class ExpenseServiceImpl implements ExpenseService {
         }
 
         for (Expense expense : list) {
-            LocalDate localDate = expense.getDate();
-            if (!map.containsKey(localDate)) {
-                map.put(localDate, List.of(expense));
+            String date = expense.getDate() == null ? "null" : expense.getDate().toString();
+            if (!map.containsKey(date)) {
+                map.put(date, List.of(expense));
             } else {
-                List<Expense> expenseList = new ArrayList<>(map.get(localDate));
+                List<Expense> expenseList = new ArrayList<>(map.get(date));
                 expenseList.add(expense);
-                map.put(localDate, expenseList);
+                map.put(date, expenseList);
             }
         }
         return map;

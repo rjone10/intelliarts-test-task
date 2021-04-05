@@ -15,5 +15,6 @@ public interface ExpenseService {
 
     void delete(LocalDate localDate);
 
-    Map<LocalDate, List<Expense>> getAll();
+    Map<String, List<Expense>> getAll();
+//    Map<LocalDate, List<Expense>> getAll();
 }

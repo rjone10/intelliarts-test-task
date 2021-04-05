@@ -10,6 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -30,12 +31,11 @@ import static org.mockito.Mockito.*;
 @ExtendWith(SpringExtension.class)
 @SpringBootTest
 class ExpenseServiceImplTest {
-    private final ExpenseService expenseService;
+    private ExpenseService expenseService;
     private final ExpenseRepository expenseRepository;
 
     @Autowired
-    public ExpenseServiceImplTest(ExpenseService expenseService, ExpenseRepository expenseRepository) {
-        this.expenseService = expenseService;
+    public ExpenseServiceImplTest(ExpenseRepository expenseRepository) {
         this.expenseRepository = expenseRepository;
     }
 
@@ -48,6 +48,7 @@ class ExpenseServiceImplTest {
 
     @BeforeEach
     void addExpenses() {
+        expenseService = new ExpenseServiceImpl(expenseRepository, restTemplate);
         expense1 = expenseService.save(new Expense(1L, LocalDate.parse("2021-04-25"), new BigDecimal("2.85"), Currency.USD, "Yogurt"));
         expense2 = expenseService.save(new Expense(2L, LocalDate.parse("2021-04-22"), new BigDecimal("12.00"), Currency.USD, "Salmon"));
         expense3 = expenseService.save(new Expense(3L, LocalDate.parse("2021-04-25"), new BigDecimal("3.00"), Currency.USD, "French fries"));
@@ -71,8 +72,12 @@ class ExpenseServiceImplTest {
         when(restTemplate.getForEntity(anyString(), any(), eq(1)))
                 .thenReturn(ResponseEntity.of(Optional.of(latestCurrencyRateDto)));
 
-        TotalAmountAndCurrency expected = new TotalAmountAndCurrency(new BigDecimal("497.89"), Currency.UAH);
-        assertEquals(expected, expenseService.getTotalAmount(Currency.UAH));
+        TotalAmountAndCurrency expected = new TotalAmountAndCurrency(new BigDecimal("498.53"), Currency.UAH);
+        TotalAmountAndCurrency actual = expenseService.getTotalAmount(Currency.UAH);
+
+        Mockito.verify(restTemplate, times(1)).getForEntity(anyString(), any(), eq(1));
+
+        assertEquals(expected, actual);
     }
 
     @Test
@@ -90,7 +95,7 @@ class ExpenseServiceImplTest {
 
         expenseService.delete(LocalDate.parse("2021-04-25"));
 
-        assertNull(expenseService.getAll().get(expense1.getDate()));
-        assertNotNull(expenseService.getAll().get(expense2.getDate()));
+        assertNull(expenseService.getAll().get(expense1.getDate().toString()));
+        assertNotNull(expenseService.getAll().get(expense2.getDate().toString()));
     }
 }

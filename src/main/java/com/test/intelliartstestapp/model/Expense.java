@@ -1,5 +1,6 @@
 package com.test.intelliartstestapp.model;
 
+import com.sun.istack.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,7 @@ public class Expense {
     private Long id;
 
     @Column(name = "date")
+    @NotNull
     private LocalDate date;
 
     @Column(name = "amount")
